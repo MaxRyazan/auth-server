@@ -6,6 +6,7 @@ import { Tokens } from "../globalInterfaces/interfaces";
 import * as bcrypt from "bcrypt"
 import { JwtService } from "@nestjs/jwt";
 import { RegisterDto } from "./dto/registerDto";
+import * as process from "process";
 
 @Injectable()
 export class AuthService {
@@ -18,10 +19,7 @@ export class AuthService {
       throw new NotFoundException('Неверные данные пользователя!')
     }
     if(await bcrypt.compare(authDto.password, existingUser.password)){
-      const payload: { username: string } = {
-        username: existingUser.username
-      }
-      const accessToken: string = this.jwtService.sign(payload)
+      const accessToken: string = this.jwtService.sign({username: existingUser.username}, { secret: process.env.JWT_SECRET })
 
       return { accessToken, refreshToken: '' }
 
@@ -38,9 +36,7 @@ export class AuthService {
     if (existingUser) {
       throw new BadRequestException('Пользователь с такими данными уже зарегистрирован!')
     }
-    const newUser:IUser = new IUser(registerDto.username, existingUser.email, await bcrypt.hash(registerDto.password, 5))
-    USER_DB.push(newUser)
-    return newUser
+    return new IUser(registerDto.username, registerDto.email, await bcrypt.hash(registerDto.password, 5))
   }
 
 
