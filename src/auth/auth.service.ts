@@ -19,9 +19,12 @@ export class AuthService {
       throw new NotFoundException('Неверные данные пользователя!')
     }
     if(await bcrypt.compare(authDto.password, existingUser.password)){
-      const accessToken: string = this.jwtService.sign({username: existingUser.username}, { secret: process.env.JWT_SECRET })
+      const accessToken: string = this.jwtService.sign({username: existingUser.username},
+        { secret: process.env.JWT_SECRET })
+      const refreshToken: string = this.jwtService.sign({username: existingUser.username},
+        { secret: process.env.JWT_SECRET, expiresIn: process.env.JWT_REFRESH_EXP })
 
-      return { accessToken, refreshToken: '' }
+      return { accessToken, refreshToken }
 
     } else {
       throw new NotFoundException('Неверные данные пользователя!')
