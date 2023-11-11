@@ -43,4 +43,21 @@ export class AuthService {
   }
 
 
+  async refresh(authDto: AuthDto): Promise<{accessToken: string}>{
+    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => user.email === authDto.email)
+    if(!existingUser) {
+      throw new NotFoundException('Неверные данные пользователя!')
+    }
+    if(await bcrypt.compare(authDto.password, existingUser.password)){
+      const accessToken: string = this.jwtService.sign({username: existingUser.username},
+        { secret: process.env.JWT_SECRET })
+
+      return { accessToken }
+
+    } else {
+      throw new NotFoundException('Неверные данные пользователя!')
+    }
+  }
+
+
 }

@@ -18,4 +18,8 @@ export class AuthController {
   register(@Body() registerDto: RegisterDto):Promise<IUser> {
     return this.authService.register(registerDto)
   }
+  @Post(`/v1/refresh`)
+  refresh(@Body() registerDto: RegisterDto):Promise<{ accessToken: string }> {
+    return this.authService.refresh(registerDto)
+  }
 }
