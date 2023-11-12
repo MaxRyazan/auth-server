@@ -43,20 +43,19 @@ export class AuthService {
   }
 
 
-  async refresh(authDto: AuthDto): Promise<{accessToken: string}>{
-    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => user.email === authDto.email)
+  async refresh(refreshToken: { refreshToken: string }): Promise<{accessToken: string}>{
+    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => {
+     return user.refreshToken === refreshToken.refreshToken;
+    })
     if(!existingUser) {
-      throw new NotFoundException('Неверные данные пользователя!')
+      throw new NotFoundException('Refresh токен не валиден!')
     }
-    if(await bcrypt.compare(authDto.password, existingUser.password)){
-      const accessToken: string = this.jwtService.sign({username: existingUser.username},
-        { secret: process.env.JWT_SECRET })
-
-      return { accessToken }
-
-    } else {
-      throw new NotFoundException('Неверные данные пользователя!')
+    const expIn = this.jwtService.decode(refreshToken.refreshToken)
+    if(Math.abs(Date.now() - expIn) > 60000 ) {
+      throw new NotFoundException('Refresh токен истёк. Залогиньтесь заново!')
     }
+    const accessToken: string = this.jwtService.sign({username: existingUser.username}, { secret: process.env.JWT_SECRET })
+    return { accessToken }
   }
 
 

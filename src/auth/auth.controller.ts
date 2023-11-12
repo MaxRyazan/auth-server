@@ -19,7 +19,7 @@ export class AuthController {
     return this.authService.register(registerDto)
   }
   @Post(`/v1/refresh`)
-  refresh(@Body() registerDto: RegisterDto):Promise<{ accessToken: string }> {
-    return this.authService.refresh(registerDto)
+  refresh(@Body() refreshToken: { refreshToken: string }):Promise<{ accessToken: string }> {
+    return this.authService.refresh(refreshToken)
   }
 }
