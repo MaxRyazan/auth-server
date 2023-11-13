@@ -23,7 +23,7 @@ export class AuthService {
         { secret: process.env.JWT_SECRET })
       const refreshToken: string = this.jwtService.sign({username: existingUser.username},
         { secret: process.env.JWT_SECRET, expiresIn: process.env.JWT_REFRESH_EXP })
-
+      existingUser.refreshToken = refreshToken
       return { accessToken, refreshToken }
 
     } else {
@@ -44,9 +44,7 @@ export class AuthService {
 
 
   async refresh(refreshToken: { refreshToken: string }): Promise<{accessToken: string}>{
-    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => {
-     return user.refreshToken === refreshToken.refreshToken;
-    })
+    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => user.refreshToken === refreshToken.refreshToken)
     if(!existingUser) {
       throw new NotFoundException('Refresh токен не валиден!')
     }

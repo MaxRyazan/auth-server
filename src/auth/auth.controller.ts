@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post, UseGuards } from "@nestjs/common";
 import { AuthService } from './auth.service';
 import { AuthDto } from "./dto/authDto";
 import { Tokens } from "../globalInterfaces/interfaces";
@@ -18,6 +18,7 @@ export class AuthController {
   register(@Body() registerDto: RegisterDto):Promise<IUser> {
     return this.authService.register(registerDto)
   }
+
   @Post(`/v1/refresh`)
   refresh(@Body() refreshToken: { refreshToken: string }):Promise<{ accessToken: string }> {
     return this.authService.refresh(refreshToken)
