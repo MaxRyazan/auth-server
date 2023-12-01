@@ -24,7 +24,7 @@ export class AuthService {
         return tokens
 
     }
-    async signInLocal(dto: AuthDto){
+    async signInLocal(dto: AuthDto): Promise<Tokens>{
         const user = await this.prisma.user.findUnique({
             where:{
                 email : dto.email
