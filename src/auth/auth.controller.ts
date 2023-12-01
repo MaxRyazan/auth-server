@@ -1,9 +1,9 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { AuthDto } from "./dto";
 import { Tokens } from "./types";
-import { AuthGuard } from "@nestjs/passport";
-import { Request} from "express";
+import { AtGuard, RtGuard } from "../guards";
+import { GetCurrentUserDecorator, GetCurrentUserIdDecorator } from "../decorators";
 
 @Controller('auth')
 export class AuthController {
@@ -22,16 +22,17 @@ export class AuthController {
 
     @Post('/logout')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(AuthGuard('jwt'))
-    logout(@Req() req: Request): Promise<boolean>{
-        const user:Express.User = req.user
-        return this.authService.logout(user['sub'])
+    @UseGuards(AtGuard)
+    logout(@GetCurrentUserIdDecorator() userId: number): Promise<boolean>{
+        return this.authService.logout(userId)
     }
     @Post('/refresh')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(AuthGuard('jwt-refresh'))
-    refresh(@Req() req: Request): Promise<Tokens>{
-        const user = req.user
-        return this.authService.refreshTokens(user['sub'], user['refreshToken'])
+    @UseGuards(RtGuard)
+    refresh(
+        @GetCurrentUserDecorator('refreshToken') rt: string,
+        @GetCurrentUserIdDecorator() userId: number
+    ): Promise<Tokens>{
+        return this.authService.refreshTokens(userId, rt)
     }
 }

@@ -12,7 +12,7 @@ export class AuthService {
 
     constructor(private prisma: PrismaService,private jwtService: JwtService) {}
 
-    async signUpLocal(dto: AuthDto): Promise<Tokens>{
+    async signUpLocal(dto: AuthDto): Promise<Tokens> {
         const newUser: User = await this.prisma.user.create({
             data: {
                 email: dto.email,
@@ -24,7 +24,7 @@ export class AuthService {
         return tokens
 
     }
-    async signInLocal(dto: AuthDto): Promise<Tokens>{
+    async signInLocal(dto: AuthDto): Promise<Tokens> {
         const user = await this.prisma.user.findUnique({
             where:{
                 email : dto.email
@@ -41,7 +41,7 @@ export class AuthService {
         await this.updateRtHash(user.id, tokens.refreshToken)
         return tokens
     }
-    async logout(userId: number): Promise<boolean>{
+    async logout(userId: number): Promise<boolean> {
         try {
             await this.prisma.user.update({
                 where: {
@@ -59,7 +59,7 @@ export class AuthService {
             console.log(e);
         }
     }
-    async refreshTokens(userId: number, rt: string){
+    async refreshTokens(userId: number, rt: string): Promise<Tokens> {
         const user = await this.prisma.user.findUnique({
             where: {
                 id: userId
@@ -81,7 +81,7 @@ export class AuthService {
         return await bcrypt.hash(data, 10)
     }
 
-    async generateTokens(userId: number, email: string): Promise<Tokens>{
+    async generateTokens(userId: number, email: string): Promise<Tokens> {
         const [at, rt] = await Promise.all([
             this.jwtService.signAsync({
                 sub: userId,
