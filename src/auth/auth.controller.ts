@@ -1,26 +1,39 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
-import { AuthService } from './auth.service';
-import { AuthDto } from "./dto/authDto";
-import { Tokens } from "../globalInterfaces/interfaces";
-import { RegisterDto } from "./dto/registerDto";
-import { IUser } from "../globalClasses/IUser";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
+import { AuthService } from "./auth.service";
+import { AuthDto } from "./dto";
+import { Tokens } from "./types";
+import { AtGuard, RtGuard } from "../guards";
+import { GetCurrentUserDecorator, GetCurrentUserIdDecorator } from "../decorators";
 
-@Controller('/')
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService) {}
 
-  @Post(`/v1/login`)
-  login(@Body() authDto: AuthDto):Promise<Tokens> {
-    return this.authService.login(authDto)
-  }
+    @Post('/local/sign-up')
+    @HttpCode(HttpStatus.CREATED)
+    signUpLocal(@Body() dto: AuthDto): Promise<Tokens> {
+        return this.authService.signUpLocal(dto)
+    }
+    @Post('/local/sign-in')
+    @HttpCode(HttpStatus.OK)
+    signInLocal(@Body() dto: AuthDto): Promise<Tokens>{
+        return this.authService.signInLocal(dto)
+    }
 
-  @Post(`/v1/register`)
-  register(@Body() registerDto: RegisterDto):Promise<IUser> {
-    return this.authService.register(registerDto)
-  }
-
-  @Post(`/v1/refresh`)
-  refresh(@Body() refreshToken: { refreshToken: string }):Promise<{ accessToken: string }> {
-    return this.authService.refresh(refreshToken)
-  }
+    @Post('/logout')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AtGuard)
+    logout(@GetCurrentUserIdDecorator() userId: number): Promise<boolean>{
+        console.log('logout');
+        return this.authService.logout(userId)
+    }
+    @Post('/refresh')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(RtGuard)
+    refresh(
+        @GetCurrentUserDecorator('refreshToken') rt: string,
+        @GetCurrentUserIdDecorator() userId: number
+    ): Promise<Tokens>{
+        return this.authService.refreshTokens(userId, rt)
+    }
 }

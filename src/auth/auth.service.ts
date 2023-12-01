@@ -1,60 +1,118 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AuthDto } from "./dto/authDto";
-import { USER_DB } from "../../USERS";
-import { IUser } from "../globalClasses/IUser";
-import { Tokens } from "../globalInterfaces/interfaces";
-import * as bcrypt from "bcrypt"
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { AuthDto } from "./dto";
+import  * as bcrypt from 'bcrypt'
 import { JwtService } from "@nestjs/jwt";
-import { RegisterDto } from "./dto/registerDto";
 import * as process from "process";
+import { Tokens } from "./types";
+import { User } from "@prisma/client";
 
 @Injectable()
 export class AuthService {
 
-  constructor(private readonly jwtService: JwtService) {}
+    constructor(private prisma: PrismaService,private jwtService: JwtService) {}
 
-  async login(authDto: AuthDto): Promise<Tokens>{
-    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => user.email === authDto.email)
-    if(!existingUser) {
-      throw new NotFoundException('Неверные данные пользователя!')
+    async signUpLocal(dto: AuthDto): Promise<Tokens> {
+        const newUser: User = await this.prisma.user.create({
+            data: {
+                email: dto.email,
+                hashPass: await this.hashData(dto.password)
+            }
+        })
+        const tokens: Tokens = await this.generateTokens(newUser.id, newUser.email)
+        await this.updateRtHash(newUser.id, tokens.refreshToken)
+        return tokens
+
     }
-    if(await bcrypt.compare(authDto.password, existingUser.password)){
-      const accessToken: string = this.jwtService.sign({username: existingUser.username},
-        { secret: process.env.JWT_SECRET })
-      const refreshToken: string = this.jwtService.sign({username: existingUser.username},
-        { secret: process.env.JWT_SECRET, expiresIn: process.env.JWT_REFRESH_EXP })
-      existingUser.refreshToken = refreshToken
-      return { accessToken, refreshToken }
-
-    } else {
-      throw new NotFoundException('Неверные данные пользователя!')
+    async signInLocal(dto: AuthDto): Promise<Tokens> {
+        const user = await this.prisma.user.findUnique({
+            where:{
+                email : dto.email
+            }
+        })
+        if(!user){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const passMatches: boolean = await bcrypt.compare(dto.password, user.hashPass)
+        if(!passMatches){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const tokens: Tokens = await this.generateTokens(user.id, user.email)
+        await this.updateRtHash(user.id, tokens.refreshToken)
+        return tokens
     }
-  }
-
-  async register(registerDto: RegisterDto): Promise<IUser> {
-    if (registerDto.password !== registerDto.confirmPassword) {
-      throw new BadRequestException('Пароли не совпадают!')
+    async logout(userId: number): Promise<boolean> {
+        try {
+            await this.prisma.user.update({
+                where: {
+                    id: userId,
+                    hashRT: {
+                        not: null
+                    }
+                },
+                data: {
+                    hashRT: null
+                }
+            })
+            return true
+        } catch (e) {
+            console.log(e);
+        }
     }
-    const existingUser: IUser | null = USER_DB.find((user: IUser): boolean => user.email === registerDto.email)
-    if (existingUser) {
-      throw new BadRequestException('Пользователь с такими данными уже зарегистрирован!')
+    async refreshTokens(userId: number, rt: string): Promise<Tokens> {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        })
+        if(!user){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const matches: boolean = await bcrypt.compare(rt, user.hashRT)
+        if(!matches){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const tokens: Tokens = await this.generateTokens(user.id, user.email)
+        await this.updateRtHash(user.id, tokens.refreshToken)
+        return tokens
     }
-    return new IUser(registerDto.username, registerDto.email, await bcrypt.hash(registerDto.password, 5))
-  }
 
-
-  async refresh(refreshToken: { refreshToken: string }): Promise<{accessToken: string}>{
-    const existingUser: IUser|null = USER_DB.find((user: IUser):boolean => user.refreshToken === refreshToken.refreshToken)
-    if(!existingUser) {
-      throw new NotFoundException('Refresh токен не валиден!')
+    async hashData(data: string): Promise<string>{
+        return await bcrypt.hash(data, 10)
     }
-    const expIn = this.jwtService.decode(refreshToken.refreshToken)
-    if(Math.abs(Date.now() - expIn) > 60000 ) {
-      throw new NotFoundException('Refresh токен истёк. Залогиньтесь заново!')
+
+    async generateTokens(userId: number, email: string): Promise<Tokens> {
+        const [at, rt] = await Promise.all([
+            this.jwtService.signAsync({
+                sub: userId,
+                email
+            }, {
+                secret: process.env.SECRET_AT_STRATEGY,
+                expiresIn: 60 * 5
+            }),
+            this.jwtService.signAsync({
+                sub: userId,
+                email
+            }, {
+                secret: process.env.SECRET_RT_STRATEGY,
+                expiresIn: 60 * 60 * 24 * 7
+            })
+        ])
+        return  {
+            accessToken: at,
+            refreshToken: rt
+        }
     }
-    const accessToken: string = this.jwtService.sign({username: existingUser.username}, { secret: process.env.JWT_SECRET })
-    return { accessToken }
-  }
 
-
+    async updateRtHash(userId: number, rt: string): Promise<void> {
+        const hash: string = await this.hashData(rt)
+        await this.prisma.user.update({
+            where:{
+                id: userId
+            },
+            data : {
+                hashRT: hash
+            }
+        })
+    }
 }
