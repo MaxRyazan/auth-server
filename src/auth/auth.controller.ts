@@ -24,7 +24,6 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @UseGuards(AtGuard)
     logout(@GetCurrentUserIdDecorator() userId: number): Promise<boolean>{
-        console.log('logout');
         return this.authService.logout(userId)
     }
     @Post('/refresh')
