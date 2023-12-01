@@ -21,7 +21,6 @@ routes :
 export class AuthDto {
     @IsEmail()
     email: string
-
     @IsNotEmpty()
     @IsString()
     password: string
