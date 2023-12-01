@@ -4,16 +4,16 @@ routes :
     @HttpCode(HttpStatus.CREATED)
     signUpLocal(@Body() dto: AuthDto): Promise<Tokens> {}
 
-    @Post('/local/sign-in')
+    @Post('auth/local/sign-in')
     @HttpCode(HttpStatus.OK)
     signInLocal(@Body() dto: AuthDto): Promise<Tokens>{}
 
-    @Post('/logout')
+    @Post('auth/logout')
     @HttpCode(HttpStatus.OK)
     @UseGuards(AtGuard)
     logout(): Promise<boolean>{}
 
-    @Post('/refresh')
+    @Post('auth/refresh')
     @HttpCode(HttpStatus.OK)
     @UseGuards(RtGuard)
     refresh(): Promise<Tokens>{}
