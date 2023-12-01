@@ -1,5 +1,5 @@
 routes :
-
+```js
     @Post('auth/local/sign-up')
     @HttpCode(HttpStatus.CREATED)
     signUpLocal(@Body() dto: AuthDto): Promise<Tokens> {}
@@ -18,6 +18,7 @@ routes :
     @UseGuards(RtGuard)
     refresh(): Promise<Tokens>{}
 
+
 export class AuthDto {
     @IsEmail()
     email: string
@@ -25,3 +26,4 @@ export class AuthDto {
     @IsString()
     password: string
 }
+```
