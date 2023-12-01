@@ -41,11 +41,40 @@ export class AuthService {
         await this.updateRtHash(user.id, tokens.refreshToken)
         return tokens
     }
-    logout(){
-
+    async logout(userId: number): Promise<boolean>{
+        try {
+            await this.prisma.user.update({
+                where: {
+                    id: userId,
+                    hashRT: {
+                        not: null
+                    }
+                },
+                data: {
+                    hashRT: null
+                }
+            })
+            return true
+        } catch (e) {
+            console.log(e);
+        }
     }
-    refreshTokens(){
-
+    async refreshTokens(userId: number, rt: string){
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        })
+        if(!user){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const matches: boolean = await bcrypt.compare(rt, user.hashRT)
+        if(!matches){
+            throw new NotFoundException("Credentials WRONG.")
+        }
+        const tokens: Tokens = await this.generateTokens(user.id, user.email)
+        await this.updateRtHash(user.id, tokens.refreshToken)
+        return tokens
     }
 
     async hashData(data: string): Promise<string>{
