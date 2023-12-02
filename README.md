@@ -1,3 +1,7 @@
+docker-compose up
+prisma migrate dev
+npm run start:dev
+
 routes :
 ```js
     @Post('auth/local/sign-up')
